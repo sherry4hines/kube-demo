@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email
+spec:
+  selector:
+    matchLabels:
+      app: email
+  template:
+    metadata:
+      labels:
+        app: email
+    spec:
+      containers:
+      - name: email
+        image: email-service:1.0.0
+        env:
+        - name: PROJECT_NAME
+          value: "s3pub"
+        - name: ENVIRON
+          value: "dev"
+        - name: SERVICE_DEPLOYMENT_DATE
+          value: "Jul 1, 2024"
+        - name:  EMAIL_SERVICE_NAME
+          value: "email-service"
+        - name: EMAIL_SERVICE_PORT
+          value: "8087"
+        - name: EMAIL_SMTP_USER
+          value: "AKIAQK5PTEX3SG3JNB7M"
+        - name: EMAIL_SMTP_PWD
+          value: "BNBjBCBDsTuLwv168Fva3OSl9Wny4ndDCFIPkre4LQPt"
+        - name: EMAIL_SMTP_HOST
+          value: "email-smtp.us-east-1.amazonaws.com"
+        - name: EMAIL_SMTP_PORT
+          value: "587"
+        - name: EMAIL_SMTP_SENDER
+          value: "sherrylyn.hines@gmail.com"
+        - name: EMAIL_MAX_ATTACH_FILE_SIZE
+          value: "10MB"
+        - name: EMAIL_SCHEMA
+          value: "email_svc"
+        - name: EMAIL_SERVICE_TAG
+          value: "1.0.0"
+        - name: EMAIL_SERVICE_DESC
+          value: "SMTP Email Service"
+        - name: EMAIL_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/s3pub?currentSchema=email_svc"
+        - name: EMAIL_DATASOURCE_USER
+          value: "dbadmin"
+        - name: EMAIL_DATASOURCE_PWD
+          value: "admin.1234"
+        - name: EMAIL_DATASOURCE_DRIVER
+          value: "org.postgresql.Driver"
+        - name: EMAIL_DATABASE_TYPE
+          value: "postgres"
+        - name: EMAIL_DATABASE_UPDATE
+          value: "true"
+        - name: AUTH_SERVER_URL
+          value: "keycloak-service.default.svc.cluster.local"
+        - name: AUTH_SERVER_ADMIN_USER
+          value: "kcadmin"
+        - name: AUTH_SERVER_ADMIN_PWD
+          value: "admin.1234"
+        - name: AUTH_SERVER_REALM
+          value: "s3pub"
+        - name: AUTH_SERVER_RESOURCE
+          value: "s3pub-client"
+        - name: AUTH_SERVER_SECRET
+          value: "I8jO3pgM9CkL4dELiXxeGiGp4PZHlTEH"
+        - name: AUTH_SERVER_ISSUER_URI
+          value: "keycloak-service.default.svc.cluster.local/realms/s3pub"
+        - name: KEYSTORE_PASSWORD
+          value: "Natalie.1"
+        - name: ENCRYPT_KEY
+          value: "Bl0wing#Up.Th3#A"
+        - name: WORKFLOW_ENGINE_BASE_URL
+          value: "workflow-service.default.svc.cluster.local/engine-rest/"
+        - name: WORKFLOW_SERVICE_API
+          value: "workflow-service.default.svc.cluster.local/workflow"
+        - name: WORKFLOW_ADMIN_USER_ID
+          value: "admin1"
+        - name: WORKFLOW_ADMIN_USER_PWD
+          value: "admin.1234"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8087

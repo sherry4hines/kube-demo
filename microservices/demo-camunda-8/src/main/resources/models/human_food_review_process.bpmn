@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0au50w8" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.14.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
+  <bpmn:process id="Human_Food_Entry_Process" name="Human Food Entry Process" isExecutable="true">
+    <bpmn:documentation>Process Import entry for human food product</bpmn:documentation>
+    <bpmn:startEvent id="Event_1elg8ck" name="Start Human Food Review">
+      <bpmn:outgoing>Flow_1u46dub</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="priorNoticeComplianceCheckTask" name="Check Prior Notice Compliance">
+      <bpmn:documentation>CBP API endpoint</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="priorNoticeComplianceCheck" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0vharec</bpmn:incoming>
+      <bpmn:outgoing>Flow_0b1gx7l</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="registeredManufacturerCheckTask" name="Check Processing Facility Registration">
+      <bpmn:documentation>FDA API endpoint</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="registeredManufacturerCheck" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_172ckr7</bpmn:incoming>
+      <bpmn:outgoing>Flow_1wfvskb</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1u46dub" sourceRef="Event_1elg8ck" targetRef="saveEntryTask" />
+    <bpmn:parallelGateway id="Gateway_0ztm8le">
+      <bpmn:incoming>Flow_1i0cdzk</bpmn:incoming>
+      <bpmn:outgoing>Flow_172ckr7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0vharec</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_172ckr7" sourceRef="Gateway_0ztm8le" targetRef="registeredManufacturerCheckTask" />
+    <bpmn:sequenceFlow id="Flow_0vharec" sourceRef="Gateway_0ztm8le" targetRef="priorNoticeComplianceCheckTask" />
+    <bpmn:sequenceFlow id="Flow_0b1gx7l" sourceRef="priorNoticeComplianceCheckTask" targetRef="Gateway_0ewxrke" />
+    <bpmn:parallelGateway id="Gateway_0ewxrke">
+      <bpmn:incoming>Flow_0b1gx7l</bpmn:incoming>
+      <bpmn:incoming>Flow_1wfvskb</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ppdf3w</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_1wfvskb" sourceRef="registeredManufacturerCheckTask" targetRef="Gateway_0ewxrke" />
+    <bpmn:sequenceFlow id="Flow_1ppdf3w" sourceRef="Gateway_0ewxrke" targetRef="analyzeRiskTask" />
+    <bpmn:serviceTask id="analyzeRiskTask" name="Analyze Risk">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="analyzeRisk" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1ppdf3w</bpmn:incoming>
+      <bpmn:outgoing>Flow_02h7y4o</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_1xc5ved" name="Requires Manual Review(s)">
+      <bpmn:incoming>Flow_02h7y4o</bpmn:incoming>
+      <bpmn:outgoing>Flow_1gpu3vn</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0huz7wr</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_02h7y4o" sourceRef="analyzeRiskTask" targetRef="Gateway_1xc5ved" />
+    <bpmn:sequenceFlow id="Flow_1gpu3vn" name="Required" sourceRef="Gateway_1xc5ved" targetRef="completeManualReviewsTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=manualReviewRequired</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="completeManualReviewsTask" name="Complete Manual Reviews">
+      <bpmn:incoming>Flow_1gpu3vn</bpmn:incoming>
+      <bpmn:outgoing>Flow_03rxktc</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_0huz7wr" name="Not Required" sourceRef="Gateway_1xc5ved" targetRef="sendDispositionTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=manualReviewRequired = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="sendDispositionTask" name="Send FDA Disposition">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="sendDisposition" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0huz7wr</bpmn:incoming>
+      <bpmn:incoming>Flow_0evnlkz</bpmn:incoming>
+      <bpmn:outgoing>Flow_1l1pnhi</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_14z33br">
+      <bpmn:incoming>Flow_1l1pnhi</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1l1pnhi" sourceRef="sendDispositionTask" targetRef="Event_14z33br" />
+    <bpmn:sequenceFlow id="Flow_03rxktc" sourceRef="completeManualReviewsTask" targetRef="updatRiskTask" />
+    <bpmn:sequenceFlow id="Flow_1i0cdzk" sourceRef="saveEntryTask" targetRef="Gateway_0ztm8le" />
+    <bpmn:serviceTask id="saveEntryTask" name="Save Entry">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="saveEntryTask" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1u46dub</bpmn:incoming>
+      <bpmn:outgoing>Flow_1i0cdzk</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0evnlkz" sourceRef="updatRiskTask" targetRef="sendDispositionTask" />
+    <bpmn:serviceTask id="updatRiskTask" name="Update Risk">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="analyzeRisk" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_03rxktc</bpmn:incoming>
+      <bpmn:outgoing>Flow_0evnlkz</bpmn:outgoing>
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Human_Food_Entry_Process">
+      <bpmndi:BPMNShape id="Activity_19hd85a_di" bpmnElement="priorNoticeComplianceCheckTask">
+        <dc:Bounds x="660" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_03t1egn_di" bpmnElement="registeredManufacturerCheckTask">
+        <dc:Bounds x="660" y="290" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0er1f1t_di" bpmnElement="Gateway_0ztm8le">
+        <dc:Bounds x="525" y="195" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0uwc5i7_di" bpmnElement="Gateway_0ewxrke">
+        <dc:Bounds x="852" y="205" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_18evdzh_di" bpmnElement="analyzeRiskTask">
+        <dc:Bounds x="1010" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1xc5ved_di" bpmnElement="Gateway_1xc5ved" isMarkerVisible="true">
+        <dc:Bounds x="1235" y="205" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1218" y="168" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_15klt4j_di" bpmnElement="completeManualReviewsTask">
+        <dc:Bounds x="1370" y="300" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1elg8ck_di" bpmnElement="Event_1elg8ck">
+        <dc:Bounds x="182" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="156" y="245" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_06ilyad_di" bpmnElement="saveEntryTask">
+        <dc:Bounds x="310" y="180" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_14z33br_di" bpmnElement="Event_14z33br">
+        <dc:Bounds x="1992" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1422qvi_di" bpmnElement="sendDispositionTask">
+        <dc:Bounds x="1750" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0gf7ms4_di" bpmnElement="updatRiskTask">
+        <dc:Bounds x="1580" y="300" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0vharec_di" bpmnElement="Flow_0vharec">
+        <di:waypoint x="550" y="195" />
+        <di:waypoint x="550" y="120" />
+        <di:waypoint x="660" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0b1gx7l_di" bpmnElement="Flow_0b1gx7l">
+        <di:waypoint x="760" y="120" />
+        <di:waypoint x="877" y="120" />
+        <di:waypoint x="877" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_172ckr7_di" bpmnElement="Flow_172ckr7">
+        <di:waypoint x="550" y="245" />
+        <di:waypoint x="550" y="330" />
+        <di:waypoint x="660" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wfvskb_di" bpmnElement="Flow_1wfvskb">
+        <di:waypoint x="760" y="330" />
+        <di:waypoint x="877" y="330" />
+        <di:waypoint x="877" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1i0cdzk_di" bpmnElement="Flow_1i0cdzk">
+        <di:waypoint x="410" y="220" />
+        <di:waypoint x="525" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ppdf3w_di" bpmnElement="Flow_1ppdf3w">
+        <di:waypoint x="902" y="230" />
+        <di:waypoint x="1010" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02h7y4o_di" bpmnElement="Flow_02h7y4o">
+        <di:waypoint x="1110" y="230" />
+        <di:waypoint x="1235" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1gpu3vn_di" bpmnElement="Flow_1gpu3vn">
+        <di:waypoint x="1260" y="255" />
+        <di:waypoint x="1260" y="340" />
+        <di:waypoint x="1370" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1277" y="323" width="45" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0huz7wr_di" bpmnElement="Flow_0huz7wr">
+        <di:waypoint x="1285" y="230" />
+        <di:waypoint x="1750" y="230" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1487" y="212" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03rxktc_di" bpmnElement="Flow_03rxktc">
+        <di:waypoint x="1470" y="340" />
+        <di:waypoint x="1580" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1l1pnhi_di" bpmnElement="Flow_1l1pnhi">
+        <di:waypoint x="1850" y="230" />
+        <di:waypoint x="1992" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1u46dub_di" bpmnElement="Flow_1u46dub">
+        <di:waypoint x="218" y="220" />
+        <di:waypoint x="310" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0evnlkz_di" bpmnElement="Flow_0evnlkz">
+        <di:waypoint x="1680" y="340" />
+        <di:waypoint x="1800" y="340" />
+        <di:waypoint x="1800" y="270" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

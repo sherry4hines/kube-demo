@@ -1,0 +1,45 @@
+global:
+  identity:
+    keycloak:
+      url:
+        protocol: "http"
+        host: "localhost"
+        port: "8080"
+      realm: "camunda-platform"
+      auth:
+        adminUser: "kcadmin"
+        adminPassword: "admin.1234"
+
+# Disable identity as part of the Camunda core
+identity:
+  enabled: true
+
+# Disable keycloak
+identityKeycloak:
+  enabled: false
+
+optimize:
+  enabled: false
+
+# Reduce for Zeebe and Gateway the configured replicas and with that the required resources
+# to get it running locally
+zeebe:
+  clusterSize: 1
+  partitionCount: 1
+  replicationFactor: 1
+  pvcSize: 10Gi
+
+zeebeGateway:
+  replicas: 1
+
+connectors:
+  enabled: true
+  inbound:
+    mode: disabled
+
+elasticsearch:
+  master:
+    replicaCount: 1
+    # Request smaller persistent volumes.
+    persistence:
+      size: 15Gi

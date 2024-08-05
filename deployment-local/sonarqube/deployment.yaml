@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      containers:
+        - name: sonarqube
+          image: sonarqube:9.9.5-community
+          env:
+            - name: SONAR_JDBC_USERNAME
+              value: "dbadmin"
+            - name: SONAR_JDBC_PASSWORD
+              value: "admin.1234"
+            - name: SONAR_JDBC_URL
+              value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/s3pub?currentSchema=sonarqube"
+          resources:
+            limits:
+              memory: "1500Mi"
+              cpu: "1000m"
+          ports:
+            - containerPort: 9000

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_14msm3t" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.14.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
+  <bpmn:process id="Human_Food_Entry_Process2" name="Process Human Food Entry Review" isExecutable="true">
+    <bpmn:documentation>Process Import entry for human food product</bpmn:documentation>
+    <bpmn:extensionElements />
+    <bpmn:startEvent id="StartEvent_1" name="Start Human Food Review">
+      <bpmn:documentation>Entry Line received for review with unique identifier shipmentId</bpmn:documentation>
+      <bpmn:outgoing>Flow_141p5mw</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_141p5mw" sourceRef="StartEvent_1" targetRef="Activity_104ubwy" />
+    <bpmn:serviceTask id="Activity_104ubwy" name="Save Entry">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="saveEntryTask" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_141p5mw</bpmn:incoming>
+      <bpmn:outgoing>Flow_0jpplny</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0jpplny" sourceRef="Activity_104ubwy" targetRef="createRequiredReviewsTask" />
+    <bpmn:serviceTask id="createRequiredReviewsTask" name="Create Required Reviews">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="createRequiredReviews" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0jpplny</bpmn:incoming>
+      <bpmn:outgoing>Flow_0uainag</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:subProcess id="Activity_0w5j7gb" name="Perform Required Reviews">
+      <bpmn:documentation>Create user and/or service tasks for each review</bpmn:documentation>
+      <bpmn:incoming>Flow_0uainag</bpmn:incoming>
+      <bpmn:outgoing>Flow_06ydlip</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=reviews" inputElement="review" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="Event_15gcbmi" name="ReviewRequest">
+        <bpmn:outgoing>Flow_19yycrg</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:exclusiveGateway id="Gateway_1ba1b0x" name="Automated?">
+        <bpmn:incoming>Flow_19yycrg</bpmn:incoming>
+        <bpmn:outgoing>Flow_05m0lqm</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1azhmsx</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_19yycrg" sourceRef="Event_15gcbmi" targetRef="Gateway_1ba1b0x" />
+      <bpmn:sequenceFlow id="Flow_05m0lqm" name="Automated" sourceRef="Gateway_1ba1b0x" targetRef="automatedReviewTask">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=review.automatedCheck</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:serviceTask id="automatedReviewTask" name="Run automated review">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="=review.reviewCheck" retries="2" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_05m0lqm</bpmn:incoming>
+        <bpmn:outgoing>Flow_1k8r2fh</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="Gateway_0rfvqh6" name="Manual Review Required?">
+        <bpmn:incoming>Flow_1k8r2fh</bpmn:incoming>
+        <bpmn:incoming>Flow_1azhmsx</bpmn:incoming>
+        <bpmn:outgoing>Flow_1z0j9ke</bpmn:outgoing>
+        <bpmn:outgoing>Flow_0hdr0nm</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_1k8r2fh" sourceRef="automatedReviewTask" targetRef="Gateway_0rfvqh6" />
+      <bpmn:sequenceFlow id="Flow_1azhmsx" name="Not Automated" sourceRef="Gateway_1ba1b0x" targetRef="Gateway_0rfvqh6">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=review.automatedCheck = false</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_1z0j9ke" name="Required" sourceRef="Gateway_0rfvqh6" targetRef="manualReviewTask">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=review.requireManualReview</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:userTask id="manualReviewTask" name="Perform Manual Review">
+        <bpmn:extensionElements>
+          <zeebe:assignmentDefinition candidateGroups="=review.reviewerRequiredRole" />
+          <zeebe:ioMapping>
+            <zeebe:input source="=review.shipmentId" target="shipmentId" />
+            <zeebe:input source="=review.reviewId" target="reviewId" />
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1z0j9ke</bpmn:incoming>
+        <bpmn:outgoing>Flow_0je80x9</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:endEvent id="Event_1yo3lae">
+        <bpmn:incoming>Flow_0je80x9</bpmn:incoming>
+        <bpmn:incoming>Flow_0hdr0nm</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_0je80x9" sourceRef="manualReviewTask" targetRef="Event_1yo3lae" />
+      <bpmn:sequenceFlow id="Flow_0hdr0nm" name="Not Required" sourceRef="Gateway_0rfvqh6" targetRef="Event_1yo3lae">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=review.requireManualReview = false</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_0uainag" sourceRef="createRequiredReviewsTask" targetRef="Activity_0w5j7gb" />
+    <bpmn:serviceTask id="analyzeRiskTask" name="Analyze Risk">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="analyzeRisk" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_06ydlip</bpmn:incoming>
+      <bpmn:outgoing>Flow_0hqtdt0</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_06ydlip" sourceRef="Activity_0w5j7gb" targetRef="analyzeRiskTask" />
+    <bpmn:serviceTask id="sendDispositionTask" name="Send FDA Disposition">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="sendDisposition" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0hqtdt0</bpmn:incoming>
+      <bpmn:outgoing>Flow_12qfhd7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0hqtdt0" sourceRef="analyzeRiskTask" targetRef="sendDispositionTask" />
+    <bpmn:endEvent id="Event_07ha1xk">
+      <bpmn:incoming>Flow_12qfhd7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_12qfhd7" sourceRef="sendDispositionTask" targetRef="Event_07ha1xk" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Human_Food_Entry_Process2">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="269" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="155" y="312" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1v65d1f_di" bpmnElement="createRequiredReviewsTask">
+        <dc:Bounds x="520" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_09rpwsw_di" bpmnElement="Activity_104ubwy">
+        <dc:Bounds x="310" y="247" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_07ha1xk_di" bpmnElement="Event_07ha1xk">
+        <dc:Bounds x="1762" y="269" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1422qvi_di" bpmnElement="sendDispositionTask">
+        <dc:Bounds x="1550" y="247" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_18evdzh_di" bpmnElement="analyzeRiskTask">
+        <dc:Bounds x="1340" y="247" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0w5j7gb_di" bpmnElement="Activity_0w5j7gb" isExpanded="true">
+        <dc:Bounds x="710" y="80" width="520" height="360" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_15gcbmi_di" bpmnElement="Event_15gcbmi">
+        <dc:Bounds x="752" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="732" y="205" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1ba1b0x_di" bpmnElement="Gateway_1ba1b0x" isMarkerVisible="true">
+        <dc:Bounds x="855" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="850" y="131" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1x8hukn_di" bpmnElement="automatedReviewTask">
+        <dc:Bounds x="970" y="140" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0rfvqh6_di" bpmnElement="Gateway_0rfvqh6" isMarkerVisible="true">
+        <dc:Bounds x="995" y="285" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="982" y="336" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_10tq47r_di" bpmnElement="manualReviewTask">
+        <dc:Bounds x="1110" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1yo3lae_di" bpmnElement="Event_1yo3lae">
+        <dc:Bounds x="1142" y="382" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_19yycrg_di" bpmnElement="Flow_19yycrg">
+        <di:waypoint x="788" y="180" />
+        <di:waypoint x="855" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05m0lqm_di" bpmnElement="Flow_05m0lqm">
+        <di:waypoint x="905" y="180" />
+        <di:waypoint x="970" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="912" y="162" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1azhmsx_di" bpmnElement="Flow_1azhmsx">
+        <di:waypoint x="880" y="205" />
+        <di:waypoint x="880" y="310" />
+        <di:waypoint x="995" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="893" y="293" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1k8r2fh_di" bpmnElement="Flow_1k8r2fh">
+        <di:waypoint x="1020" y="220" />
+        <di:waypoint x="1020" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1z0j9ke_di" bpmnElement="Flow_1z0j9ke">
+        <di:waypoint x="1045" y="310" />
+        <di:waypoint x="1110" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1056" y="292" width="45" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0hdr0nm_di" bpmnElement="Flow_0hdr0nm">
+        <di:waypoint x="1020" y="335" />
+        <di:waypoint x="1020" y="400" />
+        <di:waypoint x="1142" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1046" y="383" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0je80x9_di" bpmnElement="Flow_0je80x9">
+        <di:waypoint x="1160" y="350" />
+        <di:waypoint x="1160" y="382" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_141p5mw_di" bpmnElement="Flow_141p5mw">
+        <di:waypoint x="218" y="287" />
+        <di:waypoint x="310" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jpplny_di" bpmnElement="Flow_0jpplny">
+        <di:waypoint x="410" y="287" />
+        <di:waypoint x="520" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0uainag_di" bpmnElement="Flow_0uainag">
+        <di:waypoint x="620" y="287" />
+        <di:waypoint x="710" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12qfhd7_di" bpmnElement="Flow_12qfhd7">
+        <di:waypoint x="1650" y="287" />
+        <di:waypoint x="1762" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0hqtdt0_di" bpmnElement="Flow_0hqtdt0">
+        <di:waypoint x="1440" y="287" />
+        <di:waypoint x="1550" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06ydlip_di" bpmnElement="Flow_06ydlip">
+        <di:waypoint x="1230" y="287" />
+        <di:waypoint x="1340" y="287" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

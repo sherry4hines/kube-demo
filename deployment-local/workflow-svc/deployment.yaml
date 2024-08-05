@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow
+spec:
+  selector:
+    matchLabels:
+      app: workflow
+  template:
+    metadata:
+      labels:
+        app: workflow
+    spec:
+      containers:
+      - name: workflow
+        image: workflow-service:1.0.0
+        env:
+        - name:  WORKFLOW_SERVICE_NAME
+          value: "workflow-service"
+        - name: WORKFLOW_SERVICE_PORT
+          value: "8086"
+        - name: WORKFLOW_ADMIN_USER_ID
+          value: "admin1"
+        - name: WORKFLOW_ADMIN_USER_PWD
+          value: "admin.1234"
+        - name: WORKFLOW_SCHEMA
+          value: "camunda7"
+        - name: WORKFLOW_SERVICE_TAG
+          value: "1.0.0"
+        - name: WORKFLOW_SERVICE_DESC
+          value: "Camunda Workflow and Service Orchestrator"
+        - name: WORKFLOW_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres-service.default.svc.cluster.local/s3pub?currentSchema=camunda7"
+        - name: WORKFLOW_DATASOURCE_USER
+          value: "dbadmin"
+        - name: WORKFLOW_DATASOURCE_PWD
+          value: "admin.1234"
+        - name: WORKFLOW_DATASOURCE_DRIVER
+          value: "org.postgresql.Driver"
+        - name: WORKFLOW_DATABASE_TYPE
+          value: "postgres"
+        - name: WORKFLOW_DATABASE_UPDATE
+          value: "true"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8086
