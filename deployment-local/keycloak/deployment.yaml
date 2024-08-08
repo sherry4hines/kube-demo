@@ -16,6 +16,13 @@ spec:
         - name: keycloak
           image: quay.io/keycloak/keycloak:25.0.2
           args: ["start-dev"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1024Mi"
+            limits:
+              cpu: "500m"
+              memory: "1024Mi"
           env:
             - name: KC_HEALTH_ENABLED
               value: "true"

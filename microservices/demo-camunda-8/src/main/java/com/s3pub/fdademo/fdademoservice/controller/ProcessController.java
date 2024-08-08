@@ -59,21 +59,21 @@ public class ProcessController {
   @GetMapping("/get-user-task/{instanceId}/{taskName}")
   public String getUserTask(
 		  @PathVariable("instanceId") Long instanceId,
-		  @PathVariable("taskName") String taskName) {
+		  @PathVariable("taskName") String taskName) throws InterruptedException {
 	  LOG.info("Received process/get-user-task Instance ID: {}, task name: {}", instanceId, taskName);
 		return commonService.getUserTask(instanceId, taskName);
   }
   
   @PostMapping("/find-user-tasks")
   public String findUserTasks(
-		  @RequestBody UserTaskSearchDTO search) {
+		  @RequestBody UserTaskSearchDTO search) throws InterruptedException {
 	  LOG.info("Received process/find-user-tasks request: {}", search);
 	  return commonService.findUserTasks(search);
   }
   
   @GetMapping("/get-instance/{instanceId}")
   public String getProcessInstance(
-		  @PathVariable("instanceId") Long instanceId) {
+		  @PathVariable("instanceId") Long instanceId) throws InterruptedException {
 	  LOG.info("Received process/get-instance Instance ID: {}", instanceId);
 		return commonService.getProcessInstance(instanceId);
   }
@@ -87,7 +87,7 @@ public class ProcessController {
   @PostMapping("/assign-user-task")
   public void assignUserTask(
 		  @RequestBody AssignUserTaskDTO assignment
-		  ) throws JsonProcessingException, NumberFormatException {
+		  ) throws JsonProcessingException, NumberFormatException, InterruptedException {
 	  LOG.info("Assign Demo Reviewer: {}", assignment);
 	  commonService.assignUserTask(assignment);
   }
@@ -95,7 +95,7 @@ public class ProcessController {
   @PostMapping("/complete-user-task")
   public void completeUserTask(
 		  @RequestBody CompleteUserTaskDTO assignment
-		  ) throws NumberFormatException {
+		  ) throws NumberFormatException, InterruptedException {
 	  LOG.info("Complete User Task Request: {}", assignment);
 	  commonService.completeUserTask(assignment);
   }

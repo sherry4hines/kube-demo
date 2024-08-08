@@ -7,7 +7,7 @@
 	<name>FDA Camunda Demo</name>
 	<description>Sample FDA Application</description>
 	<groupId>com.s3pub.fdademo</groupId>
-	<artifactId>fdademo-service</artifactId>
+	<artifactId>demo-service</artifactId>
 	<version>1.0.0</version>
 
 	<properties>

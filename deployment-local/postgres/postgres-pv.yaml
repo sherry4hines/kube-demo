@@ -14,16 +14,3 @@ spec:
   hostPath:
     path: "/mnt/data"
 
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-volume-claim
-  labels:
-    app: postgres
-spec:
-  storageClassName: manual
-  accessModes:
-    - ReadWriteOnce 
-  resources:
-    requests:
-      storage: 5Gi

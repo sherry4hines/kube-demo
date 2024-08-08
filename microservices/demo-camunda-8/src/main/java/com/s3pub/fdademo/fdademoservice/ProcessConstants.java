@@ -18,6 +18,8 @@ public class ProcessConstants {
 
 	public static final String ACCESS_TOKEN_TAG = "access_token";
 	public static final String REFRESH_TOKEN_TAG = "refresh_token";
+	public static final String AUTHORIZATION_TAG = "Authorization";
+	public static final String BEARER_TAG = "Bearer ";
 	
 	public static final String FINAL_DISPOSITION_MPRO_ISSUED = "MPro Issued";
 	public static final String FINAL_DISPOSITION_ENTRY_DENIED = "Entry Denied";

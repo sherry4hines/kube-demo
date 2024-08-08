@@ -29,7 +29,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.s3pub.fdademo.fdademoservice.ProcessConstants;
 import com.s3pub.fdademo.fdademoservice.config.JwtTokenVerifier;
@@ -74,39 +73,43 @@ public class CommonService {
 
 	@Autowired
 	ObjectMapper objectMapper;
-	
-    @Autowired
-    private JwtTokenVerifier verifier;
-	
+
+	@Autowired
+	private JwtTokenVerifier verifier;
+
 	RestTemplate restTemplate = new RestTemplate();
-	
+
 	Map<String, Map<String, String>> serviceTokens = new HashMap<>();
 
 	// Retrieve user task by process instance id and task definition id
-	public String getUserTask(Long processInstanceId, String taskDefinitionId) {
+	public String getUserTask(Long processInstanceId, String taskDefinitionId) throws InterruptedException {
 		String findTaskUrl = tasklistBaseUrl + "/v1/tasks/search";
 		String task = "";
 		JSONObject body = new JSONObject();
 		body.put("processInstanceKey", Long.toString(processInstanceId));
 		body.put("taskDefinitionId", taskDefinitionId);
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(findTaskUrl))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
-					.header("Authorization", "Bearer " + getApiToken(tasklistClient, tasklistClientSecret))
+					.header(ProcessConstants.AUTHORIZATION_TAG,
+							ProcessConstants.BEARER_TAG + getApiToken(tasklistClient, tasklistClientSecret))
 					.timeout(Duration.of(5, ChronoUnit.SECONDS))
 					.POST(HttpRequest.BodyPublishers.ofString(body.toString())).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-			LOG.debug("GetUserTaskId Response: {}", response);
+			LOG.info("GetUserTaskId Response: {}", response);
 			task = response.body();
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error retrieving User Task for %s %s: %s", processInstanceId,
+					taskDefinitionId, e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 		return task;
 	}
 
-	public String getProcessInstance(Long processInstanceId) {
-		String findProcInstUrl = operateBaseUrl + "/v1/process-instances/search" ;
+	public String getProcessInstance(Long processInstanceId) throws InterruptedException {
+		String findProcInstUrl = operateBaseUrl + "/v1/process-instances/search";
 		LOG.info("Get Process Instance URL: {}", findProcInstUrl);
 		JSONObject obj = new JSONObject();
 		JSONObject filterOptions = new JSONObject();
@@ -114,13 +117,13 @@ public class CommonService {
 		obj.put("filter", filterOptions);
 		LOG.info("Filter: {}", obj);
 		String process = "";
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(findProcInstUrl))
-					.header("Authorization", "Bearer " + getApiToken(operateClient, operateClientSecret))
+					.header(ProcessConstants.AUTHORIZATION_TAG, ProcessConstants.BEARER_TAG + getApiToken(operateClient, operateClientSecret))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
 					.timeout(Duration.of(5, ChronoUnit.SECONDS))
-					.POST(HttpRequest.BodyPublishers.ofString(obj.toString()))
-					.build();
+					.POST(HttpRequest.BodyPublishers.ofString(obj.toString())).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 			LOG.info("GetProcessInstance Response: {}", response);
 			if (response.statusCode() == 200) {
@@ -129,95 +132,108 @@ public class CommonService {
 				throw new InvalidRequestException("Unable to retrieve process");
 			}
 			LOG.info("Process: {}", process);
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error retrieving Process Instance for %s: %s", processInstanceId,
+					e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 		return process;
 	}
 
-	public void completeUserTask(CompleteUserTaskDTO dto)  {
+	public void completeUserTask(CompleteUserTaskDTO dto) throws InterruptedException {
 		String completeTaskUrl = tasklistBaseUrl + "/v1/tasks/" + dto.getTaskId() + "/complete";
 		JSONObject vars = new JSONObject(dto.getVariables());
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(completeTaskUrl))
-					.header("Authorization", "Bearer " + getApiToken(tasklistClient, tasklistClientSecret))
+					.header(ProcessConstants.AUTHORIZATION_TAG, ProcessConstants.BEARER_TAG + getApiToken(tasklistClient, tasklistClientSecret))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
 					.timeout(Duration.of(5, ChronoUnit.SECONDS))
-					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.ofString(vars.toString()))
-					.build();
+					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.ofString(vars.toString())).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 			LOG.debug("CompleteUserTask Response: {}", response.statusCode());
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error completing task for %s: %s", dto.getTaskId(),
+					e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 	}
 
-	public void assignUserTask(AssignUserTaskDTO dto)  {
+	public void assignUserTask(AssignUserTaskDTO dto) throws InterruptedException {
 		String assignTaskUrl = tasklistBaseUrl + "/v1/tasks/" + dto.getTaskId() + "/assign";
 		JSONObject body = new JSONObject();
 		body.put("assignee", dto.getAssignee());
 		body.put("allowOverride", false);
 		body.put("action", "assign");
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(assignTaskUrl))
-					.header("Authorization", "Bearer " + getApiToken(tasklistClient, tasklistClientSecret))
+					.header(ProcessConstants.AUTHORIZATION_TAG, ProcessConstants.BEARER_TAG + getApiToken(tasklistClient, tasklistClientSecret))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
 					.timeout(Duration.of(5, ChronoUnit.SECONDS))
-					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.ofString(body.toString()))
-					.build();
+					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.ofString(body.toString())).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 			LOG.debug("AssignUserTask Response: {}", response);
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error assigning task for %s: %s", dto.getTaskId(),
+					e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 	}
 
-	public void unassignUserTask(AssignUserTaskDTO dto) throws JsonMappingException, JsonProcessingException {
+	public void unassignUserTask(AssignUserTaskDTO dto) throws JsonProcessingException, InterruptedException {
 		String unassignTaskUrl = tasklistBaseUrl + "/v1/tasks/" + dto.getTaskId() + "/unassign";
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(unassignTaskUrl))
-					.header("Authorization", "Bearer " + getApiToken(tasklistClient, tasklistClientSecret))
+					.header(ProcessConstants.AUTHORIZATION_TAG, ProcessConstants.BEARER_TAG + getApiToken(tasklistClient, tasklistClientSecret))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
 					.timeout(Duration.of(5, ChronoUnit.SECONDS))
-					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.noBody())
-					.build();
+					.method(HttpMethod.PATCH.name(), HttpRequest.BodyPublishers.noBody()).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 			LOG.debug("UnassignUserTask Response: {}", response.statusCode());
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error unassigning task for %s: %s", dto.getTaskId(),
+					e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 	}
 
-	
 	private String getApiToken(String client, String secret) {
 		Map<String, String> svctokens = null;
 		boolean tokenIsValid = false;
-		
-		if (serviceTokens.containsKey(client) ) {
+
+	/*	if (serviceTokens.containsKey(client)) {
 			svctokens = serviceTokens.get(client);
 			tokenIsValid = verifier.isTokenValid(svctokens.get(ProcessConstants.ACCESS_TOKEN_TAG));
 			LOG.info("Is current token valid? {}", tokenIsValid);
 		}
-		if (!tokenIsValid) {
-		MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-		formData.put("grant_type", Collections.singletonList("password"));
-		formData.put("client_id", Collections.singletonList(client));
-		formData.put("client_secret", Collections.singletonList(secret));
-		formData.put("username", Collections.singletonList(apiUsername));
-		formData.put("password", Collections.singletonList(apiUserPassword));
-		LOG.info("Authorization URL: {}", keycloakTokenUrl);
-		LOG.info("Admin Authorization request: {}", formData);
-		ResponseEntity<Map<String, String>> result = (ResponseEntity<Map<String, String>>) restTemplate
-				.postForEntity(keycloakTokenUrl, formData, serviceTokens.getClass());
-		svctokens = result.getBody();
-		LOG.info("{} Service Tokens: {}", client, svctokens);
-		serviceTokens.put(client, svctokens);
+	*/
+		if (!serviceTokens.containsKey(client)) {
+			MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+			formData.put("grant_type", Collections.singletonList("password"));
+			formData.put("client_id", Collections.singletonList(client));
+			formData.put("client_secret", Collections.singletonList(secret));
+			formData.put("username", Collections.singletonList(apiUsername));
+			formData.put("password", Collections.singletonList(apiUserPassword));
+			LOG.info("Authorization URL: {}", keycloakTokenUrl);
+			LOG.info("Admin Authorization request: {}", formData);
+			ResponseEntity<Map<String, String>> result = (ResponseEntity<Map<String, String>>) restTemplate
+					.postForEntity(keycloakTokenUrl, formData, serviceTokens.getClass());
+			svctokens = result.getBody();
+			LOG.info("{} Service Tokens: {}", client, svctokens);
+			serviceTokens.put(client, svctokens);
 		}
-		return svctokens.get(ProcessConstants.ACCESS_TOKEN_TAG);
+		if (svctokens != null && svctokens.get(ProcessConstants.ACCESS_TOKEN_TAG)!= null) {
+			return svctokens.get(ProcessConstants.ACCESS_TOKEN_TAG);
+		} else {
+			LOG.warn("Access token unavailable");
+			return "";
+		}
 	}
 
 	public String getUserToken() {
@@ -226,24 +242,26 @@ public class CommonService {
 		return jwt.getTokenValue();
 	}
 
-	public String findUserTasks(UserTaskSearchDTO search) {
+	public String findUserTasks(UserTaskSearchDTO search) throws InterruptedException {
 		String findTaskUrl = tasklistBaseUrl + "/v1/tasks/search";
 		LOG.info("Finding tasks url: {}", findTaskUrl);
 		String task = "";
 		String token = getUserToken();
-		try (HttpClient client = HttpClient.newHttpClient()) {
+		try {
+			HttpClient client = HttpClient.newHttpClient();
 			String body = objectMapper.writeValueAsString(search);
 			HttpRequest request = HttpRequest.newBuilder().uri(new URI(findTaskUrl))
 					.header(ProcessConstants.CONTENT_TYPE_TAG, MediaType.APPLICATION_JSON_VALUE)
-					.header("Authorization", "Bearer " + token)
-					.timeout(Duration.of(5, ChronoUnit.SECONDS))
+					.header(ProcessConstants.AUTHORIZATION_TAG, ProcessConstants.BEARER_TAG + token).timeout(Duration.of(5, ChronoUnit.SECONDS))
 					.POST(HttpRequest.BodyPublishers.ofString(body)).build();
 			HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 			LOG.info("GetUserTaskId Response: {}", response);
 			task = response.body();
-		} catch (URISyntaxException | InterruptedException | IOException e) {
-			LOG.error(e.getMessage());
-			throw new InvalidRequestException(e.getMessage());
+		} catch (URISyntaxException | IOException e) {
+			String errmesg = String.format("Error finding tasks: %s", 
+					e.getMessage());
+			LOG.error(errmesg);
+			throw new InvalidRequestException(errmesg);
 		}
 		return task;
 	}
